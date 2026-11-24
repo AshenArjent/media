@@ -154,7 +154,7 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
       if (!isSuccess) {
         String firstLine = new String(headerBytes, 0, firstLineEnd, StandardCharsets.US_ASCII);
         throw new HttpDataSource.InvalidResponseCodeException(
-            firstLine.contains(" 416 ") ? 416 : 400,
+            parseStatusCode(firstLine),
             firstLine,
             null,
             java.util.Collections.emptyMap(),
@@ -210,6 +210,19 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
       close();
       throw new HttpDataSource.HttpDataSourceException(
           e, dataSpec, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED, HttpDataSource.HttpDataSourceException.TYPE_OPEN);
+    }
+  }
+
+  // Parses the 3-digit code from an HTTP status line ("HTTP/1.1 404 Not Found"); 400 if absent.
+  private static int parseStatusCode(String statusLine) {
+    int firstSpace = statusLine.indexOf(' ');
+    if (firstSpace < 0 || firstSpace + 3 >= statusLine.length()) {
+      return 400;
+    }
+    try {
+      return Integer.parseInt(statusLine.substring(firstSpace + 1, firstSpace + 4));
+    } catch (NumberFormatException e) {
+      return 400;
     }
   }
 
