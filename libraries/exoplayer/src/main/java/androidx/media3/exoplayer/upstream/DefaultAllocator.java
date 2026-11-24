@@ -150,6 +150,9 @@ public final class DefaultAllocator implements Allocator {
   public synchronized void release(Allocation allocation) {
     availableAllocations[availableCount++] = allocation;
     allocatedCount--;
+    if (targetBufferSize == 0 || shouldTrim()) {
+      trim();
+    }
     // Wake up threads waiting for the allocated size to drop.
     notifyAll();
   }
@@ -161,8 +164,18 @@ public final class DefaultAllocator implements Allocator {
       allocatedCount--;
       allocationNode = allocationNode.next();
     }
+    if (targetBufferSize == 0 || shouldTrim()) {
+      trim();
+    }
     // Wake up threads waiting for the allocated size to drop.
     notifyAll();
+  }
+
+  /** A damping factor of 16 segments avoids trim-triggered thrashing on the hot playback path. */
+  private boolean shouldTrim() {
+    int targetAllocationCount = Util.ceilDivide(targetBufferSize, individualAllocationSize);
+    int targetAvailableCount = max(0, targetAllocationCount - allocatedCount);
+    return availableCount > targetAvailableCount + 16;
   }
 
   @Override

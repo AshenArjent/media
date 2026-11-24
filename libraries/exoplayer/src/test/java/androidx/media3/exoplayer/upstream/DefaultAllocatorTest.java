@@ -41,8 +41,32 @@ public final class DefaultAllocatorTest {
   }
 
   @Test
-  public void release_doesNotTrimUntilExplicitlyRequested() {
+  public void release_trimsImmediatelyWhenTargetBufferSizeIsZero() {
     DefaultAllocator allocator = new DefaultAllocator(/* trimOnReset= */ true, ALLOCATION_SIZE);
+    Allocation allocation = allocator.allocate();
+
+    allocator.release(allocation);
+
+    assertThat(allocator.getTotalBytesAllocated()).isEqualTo(0);
+    assertThat(allocator.getAvailableBytes()).isEqualTo(0);
+  }
+
+  @Test
+  public void releaseChain_trimsImmediatelyWhenTargetBufferSizeIsZero() {
+    DefaultAllocator allocator = new DefaultAllocator(/* trimOnReset= */ true, ALLOCATION_SIZE);
+    Allocation first = allocator.allocate();
+    Allocation second = allocator.allocate();
+
+    allocator.release(new TestAllocationNode(first, new TestAllocationNode(second, null)));
+
+    assertThat(allocator.getTotalBytesAllocated()).isEqualTo(0);
+    assertThat(allocator.getAvailableBytes()).isEqualTo(0);
+  }
+
+  @Test
+  public void release_doesNotTrimBelowDampingThresholdWhenTargetIsNonZero() {
+    DefaultAllocator allocator = new DefaultAllocator(/* trimOnReset= */ true, ALLOCATION_SIZE);
+    allocator.setTargetBufferSize(ALLOCATION_SIZE);
     Allocation allocation = allocator.allocate();
 
     allocator.release(allocation);
@@ -52,23 +76,7 @@ public final class DefaultAllocatorTest {
 
     allocator.trim();
 
-    assertThat(allocator.getAvailableBytes()).isEqualTo(0);
-  }
-
-  @Test
-  public void releaseChain_doesNotTrimUntilExplicitlyRequested() {
-    DefaultAllocator allocator = new DefaultAllocator(/* trimOnReset= */ true, ALLOCATION_SIZE);
-    Allocation first = allocator.allocate();
-    Allocation second = allocator.allocate();
-
-    allocator.release(new TestAllocationNode(first, new TestAllocationNode(second, null)));
-
-    assertThat(allocator.getTotalBytesAllocated()).isEqualTo(0);
-    assertThat(allocator.getAvailableBytes()).isEqualTo(2 * ALLOCATION_SIZE);
-
-    allocator.trim();
-
-    assertThat(allocator.getAvailableBytes()).isEqualTo(0);
+    assertThat(allocator.getAvailableBytes()).isEqualTo(ALLOCATION_SIZE);
   }
 
   @Test

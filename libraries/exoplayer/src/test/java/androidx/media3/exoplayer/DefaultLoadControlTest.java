@@ -74,15 +74,11 @@ public class DefaultLoadControlTest {
   }
 
   @Test
-  public void allocator_releaseAfterReset_defersTrimmingUntilExplicitlyRequested() {
+  public void allocator_releaseAfterReset_trimsImmediately() {
     Allocation allocation = allocator.allocate();
 
     allocator.reset();
     allocator.release(allocation);
-
-    assertThat(allocator.getMemoryFootprint()).isEqualTo(C.DEFAULT_BUFFER_SEGMENT_SIZE);
-
-    allocator.trim();
 
     assertThat(allocator.getMemoryFootprint()).isEqualTo(0);
   }

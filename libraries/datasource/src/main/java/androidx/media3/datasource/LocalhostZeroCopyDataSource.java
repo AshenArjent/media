@@ -203,6 +203,9 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
       opened = true;
       transferStarted(dataSpec);
       return bytesRemaining;
+    } catch (HttpDataSource.HttpDataSourceException e) {
+      close();
+      throw e;
     } catch (IOException e) {
       close();
       throw new HttpDataSource.HttpDataSourceException(
